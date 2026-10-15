@@ -42,8 +42,7 @@ const LoginForm = () => {
   const [error, setError] = useState(location.state?.authMessage ?? null);
   const loginMutation = useMutation({
     mutationFn: async (credentials) => {
-      // Safka 40-aad ku beddel kan:
-      const response = await api.post("/api/auth/login", credentials);
+      const response = await api.post("/auth/login", credentials);
       if (!response.data?.token) {
         throw new Error(
           "Login response did not include an authentication token.",
