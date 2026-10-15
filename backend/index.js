@@ -6,9 +6,6 @@ import mongoose from "mongoose";
 import helmet from "helmet";
 import swaggerUi from "swagger-ui-express";
 
-import path from "path";
-import { fileURLToPath, fileURLToPathBuffer } from "url";
-
 import usersroute from "./router/users.js";
 import uploadRouter from "./router/upload.js";
 import taskRouter from "./router/task.js";
@@ -24,19 +21,32 @@ import { swaggerSpec } from "./utilities/swagger.js";
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const allowedOrigins = (process.env.CLIENT_URL || "http://localhost:5173")
-  .split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
+// 1. CORS Configuration (Ogolow Vercel iyo Localhost)
+const allowedOrigins = [
+  "https://taskmanager-henna-nine.vercel.app",
+  "http://localhost:5173",
+  ...(process.env.CLIENT_URL
+    ? process.env.CLIENT_URL.split(",").map((o) => o.trim())
+    : []),
+];
 
-app.use(cors({ origin: allowedOrigins }));
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Ogolow request-yada aan lahayn origin (sida Postman ama mobile apps) iyo kuwa ku jira list-ka
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(null, true); // AMA beddel 'callback(new Error("CORS Policy Error"))' haddii aad rabto inaad adkayso
+      }
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  }),
+);
 
 app.use(helmet());
-// app.use(
-//   cors({
-//     origin: process.env.CLIENT_URL || "*",
-//   }),
-// );
 app.use(express.json());
 app.use(logger);
 
@@ -46,10 +56,12 @@ if (process.env.NODE_ENV === "development") {
 
 app.use(limiter);
 
+// Health Check API
 app.get("/api/health", (req, res) => {
   res.json("server is working ...👌");
 });
 
+// 2. API Routes
 app.use("/api/users", usersroute);
 app.use("/api/auth", authrouter);
 app.use("/api/admin", adminroutes);
@@ -57,22 +69,11 @@ app.use("/api/upload", uploadRouter);
 app.use("/api/tasks", taskRouter);
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-//server frontend in production
-
-if (process.env.NODE_ENV === "production") {
-  const __dirname = path.dirname(fileURLToPath(import.meta.url));
-  app.use(express.static(path.join(__dirname, "../frontend/dist")));
-
-  // Serve the frontend app
-
-  app.get(/(.*)/, (req, res) => {
-    res.sendFile(path.join(__dirname, "..", "frontend", "dist", "index.html"));
-  });
-}
-
+// 3. Error Handlers
 app.use(notfound);
 app.use(errorHandler);
 
+// 4. Start Server
 const startServer = async () => {
   if (!process.env.jwtSecret && !process.env.JWT_SECRET) {
     throw new Error("JWT_SECRET is not configured in Environment Variables.");
