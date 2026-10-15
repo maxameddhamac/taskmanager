@@ -42,9 +42,12 @@ const LoginForm = () => {
   const [error, setError] = useState(location.state?.authMessage ?? null);
   const loginMutation = useMutation({
     mutationFn: async (credentials) => {
-      const response = await api.post("/auth/login", credentials);
+      // Safka 40-aad ku beddel kan:
+      const response = await api.post("/api/auth/login", credentials);
       if (!response.data?.token) {
-        throw new Error("Login response did not include an authentication token.");
+        throw new Error(
+          "Login response did not include an authentication token.",
+        );
       }
       return response.data;
     },
@@ -82,7 +85,9 @@ const LoginForm = () => {
   return (
     <Card className="mx-auto w-full max-w-md border-border">
       <CardHeader className="space-y-1 pb-4">
-        <CardTitle className="text-center text-xl">Sign in to your account</CardTitle>
+        <CardTitle className="text-center text-xl">
+          Sign in to your account
+        </CardTitle>
         <CardDescription className="text-center">
           Enter your credentials to access your account
         </CardDescription>
